@@ -1,24 +1,73 @@
-const { ServiceBroker } = require("moleculer");
+// services/pedido.service.js
+const { Service } = require("moleculer");
+const mysql = require("mysql2");
 
-const broker = new ServiceBroker();
+module.exports = {
+  name: "pedido", // Nome do serviço
 
-broker.createService({
-  name: "pedidos",
+  // Definição de ações do serviço
   actions: {
-    novoPedido(ctx) {
-      const pedido = ctx.params;
+    // Ação para criar um pedido
+    async criar(ctx) {
+      const { nome_cliente, tipo_pao, tipo_carne, opcionais } = ctx.params;
 
-      console.log("Dados do pedido recebidos:");
-      console.log("Pão:", pedido.pao);
-      console.log("Carne:", pedido.carne);
-      console.log("Opcionais:", pedido.opcionais);
-      console.log("Observações:", pedido.observacoes);
+      // Conexão com o banco de dados MySQL
+      const connection = mysql.createConnection({
+        host: "localhost",
+        user: "root", // Altere para seu usuário do MySQL
+        password: "", // Altere para sua senha do MySQL
+        database: "pedidos", // Nome do banco de dados
+      });
 
-      // Aqui você salvaria o pedido no banco de dados ou faria qualquer outra ação necessária
+      // Query para inserir o pedido no banco
+      const query =
+        "INSERT INTO pedidos (nome_cliente, tipo_pao, tipo_carne, opcionais) VALUES (?, ?, ?, ?)";
 
-      return { status: "Pedido recebido com sucesso!", pedidoRecebido: pedido };
-    }
-  }
-});
+      try {
+        const [results] = await connection.promise().execute(query, [
+          nome_cliente,
+          tipo_pao,
+          tipo_carne,
+          opcionais,
+        ]);
 
-broker.start();
+        connection.end(); // Fecha a conexão após a operação
+
+        // Retorna a resposta
+        return {
+          id: results.insertId,
+          nome_cliente,
+          tipo_pao,
+          tipo_carne,
+          opcionais,
+        };
+      } catch (err) {
+        connection.end(); // Fecha a conexão em caso de erro
+        throw new Error("Erro ao criar pedido: " + err.message);
+      }
+    },
+
+    // Ação para listar todos os pedidos
+    async listar() {
+      // Conexão com o banco de dados MySQL
+      const connection = mysql.createConnection({
+        host: "localhost",
+        user: "root", // Altere para seu usuário do MySQL
+        password: "", // Altere para sua senha do MySQL
+        database: "pedidos", // Nome do banco de dados
+      });
+
+      try {
+        const [results] = await connection.promise().query("SELECT * FROM pedidos");
+
+        connection.end(); // Fecha a conexão após a operação
+
+        return results;
+      } catch (err) {
+        connection.end(); // Fecha a conexão em caso de erro
+        throw new Error("Erro ao listar pedidos: " + err.message);
+      }
+    },
+  },
+};
+
