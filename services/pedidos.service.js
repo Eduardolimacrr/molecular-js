@@ -1,73 +1,98 @@
-// services/pedido.service.js
-const { Service } = require("moleculer");
 const mysql = require("mysql2");
 
 module.exports = {
-  name: "pedido", // Nome do serviço
+  name: "pedido",
 
-  // Definição de ações do serviço
-  actions: {
-    // Ação para criar um pedido
-    async criar(ctx) {
-      const { nome_cliente, tipo_pao, tipo_carne, opcionais } = ctx.params;
+  created() {
+    this.connection = mysql.createConnection({
+      host: "127.0.0.1",
+      port: 3306,
+      user: "root",
+      password: "Eduardoleads7",
+      database: "pedidos",
+    });
 
-      // Conexão com o banco de dados MySQL
-      const connection = mysql.createConnection({
-        host: "localhost",
-        user: "root", // Altere para seu usuário do MySQL
-        password: "", // Altere para sua senha do MySQL
-        database: "pedidos", // Nome do banco de dados
+    this.connection.promise().connect()
+      .then(() => {
+        console.log("Conectado ao banco de dados");
+      })
+      .catch((err) => {
+        console.error("Erro ao conectar com o MySQL:", err);
+        process.exit(1);
       });
+  },
 
-      // Query para inserir o pedido no banco
+  actions: {
+    async criar(ctx) {
+      const { nome, pao, carne, opcionais } = ctx.params;
+
+      console.log("Dados recebidos:", { nome, carne, pao, opcionais });
+
+
       const query =
-        "INSERT INTO pedidos (nome_cliente, tipo_pao, tipo_carne, opcionais) VALUES (?, ?, ?, ?)";
+        "INSERT INTO pedidos (nome, pao, carne, opcionais, status) VALUES (?, ?, ?, ?, ?)";
 
       try {
-        const [results] = await connection.promise().execute(query, [
-          nome_cliente,
-          tipo_pao,
-          tipo_carne,
+        const [results] = await this.connection.promise().execute(query, [
+          nome,
+          pao,
+          carne,
           opcionais,
+          'Solicitado',
         ]);
 
-        connection.end(); // Fecha a conexão após a operação
-
-        // Retorna a resposta
         return {
           id: results.insertId,
-          nome_cliente,
-          tipo_pao,
-          tipo_carne,
+          nome,
+          pao,
+          carne,
           opcionais,
+          status: 'Solicitado',
         };
       } catch (err) {
-        connection.end(); // Fecha a conexão em caso de erro
+        console.error("Erro ao criar pedido:", err);
         throw new Error("Erro ao criar pedido: " + err.message);
       }
     },
 
-    // Ação para listar todos os pedidos
     async listar() {
-      // Conexão com o banco de dados MySQL
-      const connection = mysql.createConnection({
-        host: "localhost",
-        user: "root", // Altere para seu usuário do MySQL
-        password: "", // Altere para sua senha do MySQL
-        database: "pedidos", // Nome do banco de dados
-      });
+      const query = "SELECT * FROM pedidos";
 
       try {
-        const [results] = await connection.promise().query("SELECT * FROM pedidos");
-
-        connection.end(); // Fecha a conexão após a operação
-
+        const [results] = await this.connection.promise().query(query);
         return results;
       } catch (err) {
-        connection.end(); // Fecha a conexão em caso de erro
+        console.error("Erro ao listar pedidos:", err);
         throw new Error("Erro ao listar pedidos: " + err.message);
+      }
+    },
+
+    async delete(ctx) {
+      const { id } = ctx.params;
+
+      const query = "DELETE FROM pedidos WHERE id = ?";
+
+      try {
+        await this.connection.promise().execute(query, [id]);
+        return { message: "Pedido deletado com sucesso" };
+      } catch (err) {
+        console.error("Erro ao deletar pedido:", err);
+        throw new Error("Erro ao deletar pedido: " + err.message);
+      }
+    },
+
+    async update(ctx) {
+      const { id, status } = ctx.params;
+
+      const query = "UPDATE pedidos SET status = ? WHERE id = ?";
+
+      try {
+        await this.connection.promise().execute(query, [status, id]);
+        return { message: "Status atualizado com sucesso" };
+      } catch (err) {
+        console.error("Erro ao atualizar pedido:", err);
+        throw new Error("Erro ao atualizar pedido: " + err.message);
       }
     },
   },
 };
-
