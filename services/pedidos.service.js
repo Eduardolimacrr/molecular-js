@@ -28,6 +28,9 @@ module.exports = {
 
       console.log("Dados recebidos:", { nome, carne, pao, opcionais });
 
+      if (!nome || !pao || !carne) {
+        throw new Error("Por favor, insira o nome, o tipo de carne e o tipo de pão.");
+      }
 
       const query =
         "INSERT INTO pedidos (nome, pao, carne, opcionais, status) VALUES (?, ?, ?, ?, ?)";
